@@ -1,0 +1,6 @@
+services:
+  timeslots:
+    build:
+      dockerfile: build/Dockerfile
+      context: .
+    container_name: timeslots_service
