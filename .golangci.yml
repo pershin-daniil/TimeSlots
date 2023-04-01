@@ -1,0 +1,124 @@
+run:
+  timeout: 5m
+  go: '1.20'
+  modules-download-mode: readonly
+  skip-dirs-use-default: false
+  tests: true
+
+issues:
+  max-same-issues: 0
+
+  exclude:
+    - G107 # Potential HTTP request made with variable url
+    - G114
+    - G404 # Weak random number generator
+    - SA9003 # Empty branch
+
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - funlen
+        - lll
+        - maintidx
+        - bodyclose
+        - goconst
+        - forbidigo
+        - contextcheck
+    - path: pkg/db/.+\.go
+      linters:
+        - goconst
+
+linters-settings:
+  gosec:
+    excludes:
+      - G204
+
+  cyclop:
+    max-complexity: 20
+
+  gci:
+    sections:
+      - standard
+      - default
+
+  lll:
+    line-length: 210
+
+  nestif:
+    min-complexity: 7
+
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        json: goCamel
+
+  forbidigo:
+    forbid:
+      - .*\.Fatal.*
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - cyclop
+    - decorder
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - grouper
+    - errcheck
+    - errchkjson
+    - errname
+    - exhaustive
+    - exportloopref
+    - forbidigo
+    - funlen
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - gofmt
+    - goheader
+    - goimports
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - lll
+    - maintidx
+    - makezero
+    - misspell
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - stylecheck
+    - tagliatelle
+    - tenv
+    - thelper
+    - tparallel
+    - unconvert
+    - unused
+    - whitespace
+
+  issues:
+    exclude-use-default: false
+    max-issues-per-linter: 0
+    max-same-issues: 0
