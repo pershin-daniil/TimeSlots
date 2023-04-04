@@ -16,3 +16,4 @@
 /bin
 pkg/calendar/credentials/credentials.json
 token.json
+.env

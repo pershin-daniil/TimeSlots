@@ -3,7 +3,7 @@ lint:
 	go mod tidy
 	golangci-lint run
 
-run:
+up:
 	docker-compose up -d
 
 down:
