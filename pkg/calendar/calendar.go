@@ -29,10 +29,12 @@ func New(ctx context.Context, log *logrus.Logger) *Calendar {
 	}
 }
 
-func (c *Calendar) Events() []models.Event {
-	t := time.Now().Format(time.RFC3339)
+func (c *Calendar) SlotsOneWeek() []models.Event {
+	t := time.Now()
+	tString := t.Format(time.RFC3339)
+	tPlusWeekString := t.Add(7 * 24 * time.Hour).Format(time.RFC3339)
 	events, err := c.srv.Events.List(os.Getenv("CALENDAR_ID")).ShowDeleted(false).
-		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
+		SingleEvents(true).TimeMin(tString).TimeMax(tPlusWeekString).OrderBy("startTime").Do()
 	if err != nil {
 		c.log.Panicf("Unable to retrieve next ten of the user's events: %v", err)
 	}

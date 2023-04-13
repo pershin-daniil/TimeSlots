@@ -4,11 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"embed"
-	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pershin-daniil/TimeSlots/pkg/models"
-	"github.com/pershin-daniil/TimeSlots/pkg/telegram"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/sirupsen/logrus"
 	"strings"
@@ -61,14 +59,24 @@ func (s *Store) Migrate(direction migrate.MigrationDirection) error {
 	return nil
 }
 
-func (s *Store) User(ctx context.Context, user models.UserRequest) (models.User, error) {
+func (s *Store) User(ctx context.Context, userID int64) (models.User, error) {
+	query := `
+SELECT id, last_name, first_name, status, created_at, updated_at
+FROM users
+WHERE id = $1`
+	var result models.User
+	if err := s.db.GetContext(ctx, &result, query, userID); err != nil {
+		return models.User{}, fmt.Errorf("get user faild: %w", err)
+	}
+	return result, nil
+}
+
+func (s *Store) CreateUser(ctx context.Context, user models.UserRequest) (models.User, error) {
 	query := `
 INSERT INTO users (id, last_name, first_name)
 VALUES ($1, $2, $3)
-ON CONFLICT (id) DO UPDATE
-	SET last_name = $2,
-		first_name = $3
-RETURNING id, last_name, first_name, created_at, updated_at`
+ON CONFLICT (id) DO NOTHING
+RETURNING id, last_name, first_name, status, created_at, updated_at`
 	var newUser models.User
 	if err := s.db.GetContext(ctx, &newUser, query, user.ID, user.LastName, user.FirstName); err != nil {
 		return models.User{}, fmt.Errorf("create user faild: %w", err)
@@ -76,39 +84,39 @@ RETURNING id, last_name, first_name, created_at, updated_at`
 	return newUser, nil
 }
 
-func (s *Store) Session(ctx context.Context, userID int64, state string) (models.Session, error) {
-	if !s.isSession(ctx, userID) {
-		state = telegram.StateInit
-	}
+func (s *Store) UpdateUser(ctx context.Context, user models.UserRequest) (models.User, error) {
 	query := `
-INSERT INTO sessions (user_id, state_name)
-VALUES ($1, $2)
-ON CONFLICT (user_id) DO UPDATE
-    SET state_name = $2
-RETURNING id, user_id, state_name, updated_at;`
-	var session models.Session
-	if err := s.db.GetContext(ctx, &session, query, userID, state); err != nil {
-		return models.Session{}, fmt.Errorf("get session faild: %w", err)
+UPDATE users
+	SET last_name = $2,
+		first_name = $3,
+	    status = $4
+WHERE id = $1
+RETURNING id, last_name, first_name, status;`
+	var updatedUser models.User
+	if err := s.db.GetContext(ctx, &updatedUser, query, user.ID, user.LastName, user.FirstName, user.Status); err != nil {
+		return models.User{}, fmt.Errorf("update user faild: %w", err)
 	}
-	return session, nil
+	return updatedUser, nil
 }
 
-func (s *Store) isSession(ctx context.Context, userID int64) bool {
+func (s *Store) Status(ctx context.Context, userID int64) (string, error) {
 	query := `
-SELECT id FROM sessions
+SELECT status
+FROM users
 WHERE id = $1`
-	var result int64
-	if err := s.db.GetContext(ctx, &result, query, userID); err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return false
-		case err != nil:
-			s.log.Infof("something goes wrong: %v", err)
-			return false
-		}
+	var status string
+	if err := s.db.GetContext(ctx, &status, query, userID); err != nil {
+		return "", fmt.Errorf("get status faild: %w", err)
 	}
-	return result == userID
+	return status, nil
 }
+
+//func (s *Store) NewMsg(ctx context.Context, UserID int64, Msg int) (models.Msg, error) {
+//	query := `
+//INSERT INTO messages (user_id, msg_id)
+//VALUES ($1, $2)
+//`
+//}
 
 func (s *Store) ResetTables(ctx context.Context, tables []string) error {
 	_, err := s.db.ExecContext(ctx, `TRUNCATE TABLE`+` `+strings.Join(tables, `, `))

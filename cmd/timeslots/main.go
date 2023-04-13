@@ -6,7 +6,6 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/pershin-daniil/TimeSlots/pkg/service"
@@ -37,7 +36,7 @@ func main() {
 		log.Panic(err)
 	}
 	app := service.New(log, cal, store)
-	tg, err := telegram.New(log, tgToken, app)
+	tg, err := telegram.New(log, app, tgToken)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -49,11 +48,8 @@ func main() {
 		log.Infof("Received signal, shutting down...")
 		cancel()
 	}()
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		tg.Run(ctx)
-	}()
-	wg.Wait()
+
+	if err = tg.Run(ctx); err != nil {
+		log.Warn(err)
+	}
 }

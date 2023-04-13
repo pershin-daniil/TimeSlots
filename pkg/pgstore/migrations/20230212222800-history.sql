@@ -8,6 +8,7 @@ CREATE TABLE users_history
     user_id      int         NOT NULL,
     last_name    varchar     NOT NULL,
     first_name   varchar     NOT NULL,
+    status       varchar,
     notification time,
     event_time   timestamptz NOT NULL DEFAULT NOW(),
     created_at   timestamptz NOT NULL DEFAULT NOW()
@@ -18,8 +19,8 @@ CREATE OR REPLACE FUNCTION users_history()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    INSERT INTO users_history (user_id, last_name, first_name, notification, event_time, created_at)
-    VALUES (NEW.id, NEW.last_name, NEW.first_name, NEW.notification, NOW(), NEW.created_at);
+    INSERT INTO users_history (user_id, last_name, first_name, notification, status, event_time, created_at)
+    VALUES (NEW.id, NEW.last_name, NEW.first_name, NEW.notification, NEW.status, NOW(), NEW.created_at);
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;

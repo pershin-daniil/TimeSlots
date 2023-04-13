@@ -12,7 +12,4 @@ down:
 build:
 	docker compose build --no-cache
 
-test:
-	go test -v ./tests/main_test.go
-
 .PHONY: build
