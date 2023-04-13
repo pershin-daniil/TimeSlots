@@ -2,17 +2,24 @@ package main
 
 import (
 	"context"
+	"github.com/pershin-daniil/TimeSlots/pkg/pgstore"
+	migrate "github.com/rubenv/sql-migrate"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
+	"github.com/pershin-daniil/TimeSlots/pkg/service"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pershin-daniil/TimeSlots/pkg/calendar"
 	"github.com/pershin-daniil/TimeSlots/pkg/logger"
 	"github.com/pershin-daniil/TimeSlots/pkg/telegram"
 )
 
-var tgToken = os.Getenv("TG_TOKEN")
+var (
+	tgToken = os.Getenv("TG_TOKEN")
+	dsn     = os.Getenv("PG_DSN")
+)
 
 func main() {
 	log := logger.New()
@@ -21,7 +28,15 @@ func main() {
 	defer cancel()
 
 	cal := calendar.New(ctx, log)
-	tg, err := telegram.New(log, tgToken, cal)
+	store, err := pgstore.New(ctx, log, dsn)
+	if err != nil {
+		log.Panic(err)
+	}
+	if err = store.Migrate(migrate.Up); err != nil {
+		log.Panic(err)
+	}
+	app := service.New(log, cal, store)
+	tg, err := telegram.New(log, app, tgToken)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -33,11 +48,8 @@ func main() {
 		log.Infof("Received signal, shutting down...")
 		cancel()
 	}()
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		tg.Run(ctx)
-	}()
-	wg.Wait()
+
+	if err = tg.Run(ctx); err != nil {
+		log.Warn(err)
+	}
 }

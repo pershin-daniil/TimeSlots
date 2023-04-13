@@ -3,7 +3,7 @@ lint:
 	go mod tidy
 	golangci-lint run
 
-run:
+up:
 	docker-compose up -d
 
 down:
@@ -11,8 +11,5 @@ down:
 
 build:
 	docker compose build --no-cache
-
-test:
-	go test -v ./tests/main_test.go
 
 .PHONY: build
