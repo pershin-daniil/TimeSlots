@@ -10,22 +10,7 @@ type Msg struct {
 	Created time.Time `db:"created_at"`
 }
 
-type Event struct {
-	ID          string
-	Title       string
-	Description string
-	Start       string
-	End         string
-	Created     string
-	Updated     string
-	Status      string
-}
-
-var (
-	StatusUserGuest = "guest"
-	StatusUserFT    = "FT"
-	StatusUserPT    = "PT"
-)
+var StatusUserGuest = "guest"
 
 type User struct {
 	ID        int64     `db:"id"`

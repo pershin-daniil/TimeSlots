@@ -3,31 +3,21 @@ package telegram
 import (
 	"context"
 	"fmt"
+
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pershin-daniil/TimeSlots/pkg/models"
 	"github.com/sirupsen/logrus"
 )
 
-type App interface {
-	User(ctx context.Context, newUser models.UserRequest) (models.User, error)
-	Status(ctx context.Context, userID int64) (string, error)
-	CalendarApp
-}
-
-type CalendarApp interface {
-	Events() []models.Event
-}
-
 type handlerFunc func(ctx context.Context, update tg.Update) error
 
 type Telegram struct {
 	log        *logrus.Entry
-	app        App
 	bot        *tg.BotAPI
 	handlerMap map[string]handlerFunc
 }
 
-func New(log *logrus.Logger, app App, token string) (*Telegram, error) {
+func New(log *logrus.Logger, token string) (*Telegram, error) {
 	bot, err := tg.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init bot: %w", err)
@@ -35,7 +25,6 @@ func New(log *logrus.Logger, app App, token string) (*Telegram, error) {
 	log.Debugf("Authorized on account %s", bot.Self.UserName)
 	return &Telegram{
 		log:        log.WithField("module", "telegram"),
-		app:        app,
 		bot:        bot,
 		handlerMap: make(map[string]handlerFunc),
 	}, nil
@@ -59,7 +48,6 @@ func (t *Telegram) Run(ctx context.Context) error {
 
 var (
 	cmdStart     = "/start"
-	cmdFT        = "/FT"
 	cmdAbout     = "/about"
 	cmdContact   = "/contact"
 	cmdEducation = "/education"
@@ -75,39 +63,78 @@ var (
 	msgAbout = `
 Меня зовут Аня, и я - персональный тренер DDX Авиапарк ☺️
 
-Когда-то давно я пришла в зал и... испугалась всех этих непонятных и одинаковых тренажёров. Я провела целый год на беговой дорожке, избегая их, но со временем мой страх перерос в желание узнать больше о спорте и тренировках.
+Когда-то давно я пришла в зал и... испугалась всех этих непонятных и одинаковых тренажёров.
+Я провела целый год на беговой дорожке, избегая их, но со временем мой страх перерос в желание узнать больше о спорте и тренировках.
 
 Теперь я - тренер, которому нравится общаться с новыми людьми и помогать им достигать своих целей. Я знаю, как сложно начать свой путь к здоровому образу жизни, и я здесь, чтобы помочь вам.
 Мой стиль - это персональный подход: всегда уделяю внимание индивидуальным потребностям каждого из моих подопечных 👍`
 
 	msgContact = `
-Ты можешь написать в телеграм 
+Ты можешь написать в телеграм ✈
 
-Подписывайся на мой инстаграм`
-	msgFT = `
-OK 👌 Ждем подтверждения тренера.`
+Подписывайся на мой инстаграм 🖼`
 
-	msgPrice     = "50 рублей"
-	msgEducation = "Тютюрский университет"
+	msgPrice = `
+Разовая тренировка - 3500₽
+
+<b>Абонементы на месяц:</b>
+<code>
+5  тренировок - 15 000₽
+8  тренировок - 22 000₽
+10 тренировок - 27 000₽
+12 тренировок - 30 000₽
+</code>
+
+План питания на месяц - 2 000₽
+
+Программа тренировок на месяц с сопровождением (дома/в зале) - от 4 000₽ (в зависимости от количества тренировок в неделю)
+
+<b>Мини-группы:</b>
+
+2 человека:
+<code>
+1 тренировка - 5 000₽
+4 тренировки - 16 000₽
+8 тренировок - 30 000₽
+</code>
+
+❗️Все тренировки покупаются на месяц (отсчёт с первого занятия, а не со дня покупки), далее сгорают.
+❗️По причине болезни добавляется дополнительная неделя на отработку пропущенных занятий.
+❗️При отмене/переносе занятия менее, чем за 5 часов, оно будет считаться списанным.
+`
+	msgEducation = `
+<b>🏋 Направления деятельности:</b>
+▫ Силовые, функциональные тренировки, стретчинг;
+▫ Составление программ персональных тренировок и программ питания;
+▫ Коррекция состава тела (снижение жировой ткани, увеличение мышечной массы);
+▫ Коррекция рациона питания;
+▫ Здоровая осанка;
+▫ Тренировки в период беременности и после;
+
+<b>🎓 Образование:</b>
+▫ FPA (Ассоциация Профессионалов Фитнеса);
+
+<b>🤓 Курсы:</b>
+▫ Ягодичная биомеханика;
+▫ Подвесные конструкции;
+▫ Миофасциальный релиз;
+▫ Физиология беременности;
+▫ Перинатальный тренинг и послеродовое восстановление.
+`
 
 	btnBack = "Назад"
 
 	btnAbout = "Обо мне"
-	btnFT    = "Первая тренировка"
 
 	btnContact   = "Контакты"
 	btnEducation = "Образование"
 	btnPrice     = "Прайс"
-
-	btnPickSlot = "Выбрать"
 )
 
 var (
 	welcomeKbd = tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData(btnAbout, cmdAbout)),
-		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData(btnFT, cmdFT)))
+			tg.NewInlineKeyboardButtonData(btnAbout, cmdAbout)))
 	aboutKbd = tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData(btnEducation, cmdEducation)),
@@ -127,9 +154,6 @@ var (
 			tg.NewInlineKeyboardButtonURL("Инстаграм", "https://www.instagram.com/filianan")),
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData(btnBack, cmdAbout)))
-	pickSlotKbd = tg.NewInlineKeyboardMarkup(
-		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData(btnPickSlot, "")))
 )
 
 func (t *Telegram) initHandlers() {
@@ -138,7 +162,6 @@ func (t *Telegram) initHandlers() {
 	t.handle(cmdContact, t.contactHandler)
 	t.handle(cmdPrice, t.priceHandler)
 	t.handle(cmdEducation, t.educationHandler)
-	t.handle(cmdFT, t.FTHandler)
 }
 
 func (t *Telegram) handle(command string, handler handlerFunc) {
@@ -151,14 +174,14 @@ func (t *Telegram) processUpdate(ctx context.Context, update tg.Update) {
 	case update.Message != nil && update.Message.IsCommand():
 		currentMsg := tg.NewDeleteMessage(update.FromChat().ID, update.Message.MessageID)
 		oldMsg := tg.NewDeleteMessage(update.FromChat().ID, update.Message.MessageID-1)
-		t.bot.Send(currentMsg)
-		t.bot.Send(oldMsg)
+		_, _ = t.bot.Send(currentMsg)
+		_, _ = t.bot.Send(oldMsg)
 		command = update.Message.Text
 	case update.Message != nil:
 		currentMsg := tg.NewDeleteMessage(update.FromChat().ID, update.Message.MessageID)
 		oldMsg := tg.NewDeleteMessage(update.FromChat().ID, update.Message.MessageID-1)
-		t.bot.Send(currentMsg)
-		t.bot.Send(oldMsg)
+		_, _ = t.bot.Send(currentMsg)
+		_, _ = t.bot.Send(oldMsg)
 		command = cmdStart
 	case update.CallbackQuery != nil:
 		callback := tg.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
@@ -188,25 +211,14 @@ func (t *Telegram) parseUser(update tg.Update) models.UserRequest {
 	}
 }
 
-func (t *Telegram) startHandler(ctx context.Context, update tg.Update) error {
-	parsedUser := t.parseUser(update)
+func (t *Telegram) startHandler(_ context.Context, update tg.Update) error {
+	user := t.parseUser(update)
 
-	user, err := t.app.User(ctx, parsedUser)
-	if err != nil {
-		return err
-	}
-
-	var msgText string
-	switch user.Status {
-	case models.StatusUserGuest:
-		msgText = fmt.Sprintf(msgStartf, user.FirstName)
-	case models.StatusUserFT:
-		msgText = fmt.Sprintf(msgStartf+"FT", user.FirstName)
-	}
+	msgText := fmt.Sprintf(msgStartf, user.FirstName)
 
 	if update.CallbackQuery != nil {
 		msgEdit := tg.NewEditMessageTextAndMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID, msgText, welcomeKbd)
-		if _, err = t.bot.Send(msgEdit); err != nil {
+		if _, err := t.bot.Send(msgEdit); err != nil {
 			return err
 		}
 		return nil
@@ -214,13 +226,13 @@ func (t *Telegram) startHandler(ctx context.Context, update tg.Update) error {
 
 	msg := tg.NewMessage(update.Message.Chat.ID, msgText)
 	msg.ReplyMarkup = welcomeKbd
-	if _, err = t.bot.Send(msg); err != nil {
+	if _, err := t.bot.Send(msg); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *Telegram) aboutHandler(ctx context.Context, update tg.Update) error {
+func (t *Telegram) aboutHandler(_ context.Context, update tg.Update) error {
 	msg := tg.NewEditMessageTextAndMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID, msgAbout, aboutKbd)
 	if _, err := t.bot.Send(msg); err != nil {
 		return err
@@ -228,7 +240,7 @@ func (t *Telegram) aboutHandler(ctx context.Context, update tg.Update) error {
 	return nil
 }
 
-func (t *Telegram) contactHandler(ctx context.Context, update tg.Update) error {
+func (t *Telegram) contactHandler(_ context.Context, update tg.Update) error {
 	msg := tg.NewEditMessageTextAndMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID, msgContact, contactKbd)
 	if _, err := t.bot.Send(msg); err != nil {
 		return err
@@ -236,42 +248,20 @@ func (t *Telegram) contactHandler(ctx context.Context, update tg.Update) error {
 	return nil
 }
 
-func (t *Telegram) priceHandler(ctx context.Context, update tg.Update) error {
+func (t *Telegram) priceHandler(_ context.Context, update tg.Update) error {
 	msg := tg.NewEditMessageTextAndMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID, msgPrice, backToAboutKbd)
+	msg.ParseMode = tg.ModeHTML
 	if _, err := t.bot.Send(msg); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *Telegram) educationHandler(ctx context.Context, update tg.Update) error {
+func (t *Telegram) educationHandler(_ context.Context, update tg.Update) error {
 	msg := tg.NewEditMessageTextAndMarkup(update.FromChat().ID, update.CallbackQuery.Message.MessageID, msgEducation, backToAboutKbd)
+	msg.ParseMode = tg.ModeHTML
 	if _, err := t.bot.Send(msg); err != nil {
 		return err
-	}
-	return nil
-}
-
-func (t *Telegram) FTHandler(ctx context.Context, update tg.Update) error {
-	msg := tg.NewMessage(update.FromChat().ID, "Доступное время для записи на первую тренировку 👇")
-	events := t.app.Events()
-	_, _ = t.bot.Send(msg)
-	for i := 0; i < 1; i++ {
-		event := events[i]
-		msg = tg.NewMessage(update.FromChat().ID, fmt.Sprintf("Название: %s\nНачало: %s\nКонец: %s", event.Title, event.Start, event.End))
-		msg.ReplyMarkup = pickSlotKbd
-		_, _ = t.bot.Send(msg)
-	}
-
-	callback := tg.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-	if _, err := t.bot.Request(callback); err != nil {
-		panic(err)
-	}
-
-	msg = tg.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
-	if _, err := t.bot.Send(msg); err != nil {
-		panic(err)
-
 	}
 	return nil
 }
