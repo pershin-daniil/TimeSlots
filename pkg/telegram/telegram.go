@@ -134,7 +134,9 @@ var (
 var (
 	welcomeKbd = tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData(btnAbout, cmdAbout)))
+			tg.NewInlineKeyboardButtonData(btnAbout, cmdAbout)),
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonURL("Получить программу тренировок  🏋️", "https://t.me/ddx_coach_bot")))
 	aboutKbd = tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData(btnEducation, cmdEducation)),
@@ -171,6 +173,8 @@ func (t *Telegram) handle(command string, handler handlerFunc) {
 func (t *Telegram) processUpdate(ctx context.Context, update tg.Update) {
 	var command string
 	switch {
+	case update.MyChatMember != nil:
+		return
 	case update.Message != nil && update.Message.IsCommand():
 		currentMsg := tg.NewDeleteMessage(update.FromChat().ID, update.Message.MessageID)
 		oldMsg := tg.NewDeleteMessage(update.FromChat().ID, update.Message.MessageID-1)
@@ -197,8 +201,6 @@ func (t *Telegram) processUpdate(ctx context.Context, update tg.Update) {
 				t.log.Warnf("err during handle command: %v", err)
 			}
 		}()
-	} else {
-		t.log.Warnf("unknown command: %s, %#v", command, update)
 	}
 }
 
