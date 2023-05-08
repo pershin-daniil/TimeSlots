@@ -1,35 +1,11 @@
 version: "3"
 services:
-  db:
-    image: postgres:14.2-alpine
-    container_name: timeslots_pg
-    environment:
-      POSTGRES_DB: timeslots
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
-    ports:
-      - "6431:5432"
-    volumes:
-      - pg:/var/lib/postgresql/data
-    networks:
-      - time-network
-
   timeslots:
     build:
-      dockerfile: build/Dockerfile
+      dockerfile: Dockerfile
       context: .
     container_name: timeslots_service
     environment:
-      - PG_DSN=${PG_DSN}
       - TG_TOKEN=${TG_TOKEN}
-      - CALENDAR_ID=${CALENDAR_ID}
     ports:
       - "8080:8080"
-    networks:
-      - time-network
-
-volumes:
-  pg:
-
-networks:
-  time-network:
